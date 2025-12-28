@@ -1,33 +1,26 @@
-# ProjetoDungeon
+# 🏰 Dungeon Roguelike - PPO
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+Projeto de jogo com geração procedural de masmorras (Dungeon Crawler) desenvolvido para o Projeto Profissional Orientado (PPO) do IFPE.
 
-This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+## 🎮 Sobre o Jogo
+O jogo é um Roguelike top-down onde o mapa é gerado matematicamente toda vez que o jogo inicia, garantindo que nenhuma partida seja igual à outra. O objetivo é explorar as salas, encontrar a saída e sobreviver (em desenvolvimento).
 
-## Platforms
+## 🛠️ Tecnologias Utilizadas
+* **Java 17:** Linguagem principal.
+* **LibGDX:** Framework de desenvolvimento de jogos.
+* **Geração Procedural:** Algoritmo próprio baseado em BSP e autômatos para criação de salas e corredores.
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+## 🚀 Como Rodar
+1.  Tenha o **Java 17** (ou superior) instalado.
+2.  Clone este repositório.
+3.  Abra o projeto no **IntelliJ IDEA**.
+4.  Aguarde o Gradle baixar as dependências.
+5.  Execute a classe `Lwjgl3Launcher` dentro da pasta `lwjgl3/src/main/java/br.com.ppo.Dungeon.lwjgl3`.
 
-## Gradle
+## 👥 Integrantes do Grupo
+* **João Alfredo** (Tech Lead / Backend / Geração Procedural)
+* **João Fernando** (Pixel Art / Design)
+* **Lucas Rafael** (Documentação / Roteiro)
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
-
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
-
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+---
+*Projeto em desenvolvimento - 2025*

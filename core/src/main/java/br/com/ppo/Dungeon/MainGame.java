@@ -7,46 +7,68 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.utils.ScreenUtils;
 
-import java.awt.*;
+
+import java.awt.Rectangle;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class MainGame extends ApplicationAdapter {
-    ShapeRenderer shapeRenderer;
+    SpriteBatch batch;
     OrthographicCamera camera;
     DungeonPT2 dungeon;
 
+    //Texturas do jogo
+    Texture imgChao;
+    Texture imgParede;
+    Texture imgPlayer;
+    Texture imgLuz;
+
     //Configuraçao
-    int tamanhoTile = 20;
-    int larguraMapa = 250;
-    int alturaMapa = 250;
+    int tamanhoTile = 32;
+    int larguraMapa = 100;
+    int alturaMapa = 100;
+    int numSalas = 20;
+    int paciencia = 1000;
+
     //Variaveis do jogador
-    int playerX, playerY;
+    //Float para ser preciso e suave
+    float playerX, playerY;
+
+    float velocidade = 150f; //150 pixeis por segundo
 
     @Override
     public void create(){
-        shapeRenderer = new ShapeRenderer();
+        batch = new SpriteBatch();
 
         //Camera para ver de cima
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800,600);
+        // Dá um zoom para ficar parecido com "The Escapists" (quanto menor, mais perto)
+        camera.zoom = 0.9f;
+
+        //Carregar as texturas
+        imgPlayer = new Texture("astronauta.png");
+        imgChao = new Texture("chao.png");
+        imgParede= new Texture("parede.png");
+        imgLuz = new Texture("luz.png");
+
+        //Filtro para nao deixar a imagem borrada
+        imgPlayer.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        imgChao.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        imgParede.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
         //Gera a dungeon
-        int largura = 250;
-        int altura = 250;
         dungeon=new DungeonPT2(larguraMapa,alturaMapa);
-        dungeon.gerarDungeon(40,1000);
+        dungeon.gerarDungeon(numSalas,paciencia);
 
         // O boneco vai aparecer na sala 0, o inicio de toda a geraçao do mapa.
         //Pega a lista das salas que criamos
         Rectangle primeiraSala = dungeon.getSalas().get(0);
 
-        //Coloca ele bem no centro
-        // (x + metade da largura)
-        playerX = primeiraSala.x + (primeiraSala.width / 2);
-        playerY = primeiraSala.y + (primeiraSala.height / 2);
+        //Agora o boneco anda por pixels, e nao TILES como antes.
+        playerX = (primeiraSala.x * tamanhoTile) + (primeiraSala.width * tamanhoTile /2f);
+        playerY = (primeiraSala.y * tamanhoTile) + (primeiraSala.height * tamanhoTile /2f);
+
     }
 
     @Override
@@ -54,75 +76,127 @@ public class MainGame extends ApplicationAdapter {
         //Logica do movimento do boneco
         moverJogador();
 
+        //Pra camera seguir o boneco
+        camera.position.set(playerX, playerY, 0);
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
+
         //Limpa a tela
         Gdx.gl.glClearColor(0,0,0,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // A câmera foca na posição X e Y do jogador (convertido para pixels)
-        camera.position.set(playerX * tamanhoTile, playerY * tamanhoTile, 0);
-        // Dá um zoom para ficar parecido com "The Escapists" (quanto menor, mais perto)
-        camera.zoom = 0.5f;
-
-        camera.update();
-        shapeRenderer.setProjectionMatrix(camera.combined);
-
-        //2. Desenha o mapa
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        batch.begin();
 
         int[][] mapa = dungeon.getMapa();
 
-        for(int x = 0; x < larguraMapa;x++){
-            for(int y = 0; y < alturaMapa;y++){
-                if(mapa[x][y]==1){
-                    //Quando for parede (1) pinta de cinza
-                    shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1);
-                }else{
-                    //Quando for chao (0) pinta de cinza claro
-                    shapeRenderer.setColor(0.8f, 0.8f, 0.8f, 1);
-                }
+        //Primeira otimização do jogo!!!!
+        //Agora vai ser desenhado somente o que está no campo de visão da camera.
+        //Isso evita desenhar um monte de TILE e travar algum computador.
 
-                shapeRenderer.rect(x*tamanhoTile, y*tamanhoTile,tamanhoTile,tamanhoTile);
+        int visao = 20; //Quantidade de blocos para desenhar
+        int centrox = (int) (playerX / tamanhoTile);
+        int centroy = (int) (playerY / tamanhoTile);
+
+        for(int x = centrox - visao; x < centrox + visao; x++) {
+            for (int y = centroy - visao; y < centroy + visao; y++) {
+                if (x >= 0 && x < larguraMapa && y >= 0 && y < alturaMapa) {
+                    if (mapa[x][y] == 1) {
+                        batch.draw(imgParede, x * tamanhoTile, y * tamanhoTile);
+                    } else if (mapa[x][y] == 0) {
+                        batch.draw(imgChao, x * tamanhoTile, y * tamanhoTile);
+                    }
+                }
             }
         }
+        //Desenha o jogador
+        batch.draw(imgPlayer, playerX-16,playerY-16);
 
-        // Desenha o Jogador (Quadrado Vermelho)
-        shapeRenderer.setColor(1, 0, 0, 1);
-        shapeRenderer.rect(playerX * tamanhoTile, playerY * tamanhoTile, tamanhoTile, tamanhoTile);
+        //Desenha a vinheta de sombra
+        float larguraLuz = 1000;
+        float alturaLuz = 1000;
 
-        shapeRenderer.end();
+        batch.draw(imgLuz, playerX - (larguraLuz/2), playerY - (alturaLuz/2), larguraLuz, alturaLuz);
+
+        batch.end();
     }
 
-    @Override
-    public void dispose(){
-        shapeRenderer.dispose();
-    }
+
 
     //Funçao de mover o jogador
     public void moverJogador(){
 
-        int[][] mapa = dungeon.getMapa();
+        //Logica refeita para ter movimento livre
 
-        // Usamos isKeyJustPressed para ele andar 1 bloco por vez (sem deslizar)
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            // Verifica se a coordenada acima NÃO É parede (1)
-            if (playerY + 1 < alturaMapa && mapa[playerX][playerY + 1] != 1) {
-                playerY++;
-            }
+        //Garante que a velocide seja igual para um pc lento ou rapido
+        //Isso deve evitar que fique igual aos GTA's antigos, que ao jogar com um computador novo
+        //ele fica extremamente rapido.
+
+        float dt = Gdx.graphics.getDeltaTime();
+
+        // Variáveis temporárias para onde o jogador QUER ir
+        float novaX = playerX;
+        float novaY = playerY;
+
+        // Note: isKeyPressed (contínuo) em vez de isKeyJustPressed (toque único)
+        if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
+            novaY += velocidade * dt;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            if (playerY - 1 >= 0 && mapa[playerX][playerY - 1] != 1) {
-                playerY--;
-            }
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            novaY -= velocidade * dt;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-            if (playerX - 1 >= 0 && mapa[playerX - 1][playerY] != 1) {
-                playerX--;
-            }
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            novaX -= velocidade * dt;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-            if (playerX + 1 < larguraMapa && mapa[playerX + 1][playerY] != 1) {
-                playerX++;
-            }
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            novaX += velocidade * dt;
+        }
+
+        //Verificaçao de colisao
+        // Verifica o eixo X primeiro
+        if (!colideComParede(novaX, playerY)) {
+            playerX = novaX;
+        }
+        // Depois verifica o eixo Y (isso permite "deslizar" na parede)
+        if (!colideComParede(playerX, novaY)) {
+            playerY = novaY;
         }
     }
+
+
+    private boolean colideComParede(float x, float y) {
+        // Tamanho da caixa de colisão (um pouco menor que 32 para não travar nas quinas)
+        float margem = 14f; // 14 pra cada lado = 28 pixels de largura total
+
+        // Verifica os 4 cantos: Esquerda-Baixo, Direita-Baixo, Esquerda-Cima, Direita-Cima
+        if (eParede(x - margem, y - margem)) return true;
+        if (eParede(x + margem, y - margem)) return true;
+        if (eParede(x - margem, y + margem)) return true;
+        if (eParede(x + margem, y + margem)) return true;
+
+        return false; // Se nenhum canto bateu, tá livre
+    }
+
+    private boolean eParede (float x, float y){
+        // Converte pixel (ex: 1550) para indice do array (ex: 48)
+        int tileX = (int) (x / tamanhoTile);
+        int tileY = (int) (y / tamanhoTile);
+
+        // Segurança para não sair do mapa
+        if (tileX < 0 || tileX >= larguraMapa || tileY < 0 || tileY >= alturaMapa) {
+            return true; // Fora do mapa é parede
+        }
+
+        // Retorna VERDADEIRO se o bloco for 1 (Parede)
+        return dungeon.getMapa()[tileX][tileY] == 1;
+    }
+
+    @Override
+    public void dispose(){
+        batch.dispose();
+        imgChao.dispose();
+        imgParede.dispose();
+        imgPlayer.dispose();
+        imgLuz.dispose();
+    }
+
 }

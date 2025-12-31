@@ -132,7 +132,17 @@ public class DungeonPT2 {
          * menor (ou vice versa), mesmo que seja dificil ocorrer mas é bom se precaver.
          */
         for (int x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+
+            //Pinta o chao
             mapa[x][yInicial] = 0;
+
+
+            if(yInicial+1<altura){
+                mapa[x][yInicial+1]=0;
+            }
+
+            // Se quiser largura 3, descomente a linha abaixo:
+            // if (yInicial - 1 > 0) mapa[x][yInicial - 1] = 0;
         }
     }
 
@@ -140,6 +150,13 @@ public class DungeonPT2 {
     public void corredorV(int y1, int y2, int xFinal) {
         for (int y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
             mapa[xFinal][y] = 0;
+
+            if(xFinal+1<largura){
+                mapa[xFinal+1][y]=0;
+            }
+
+            // Se quiser largura 3, descomente a linha abaixo:
+            // if (xFinal - 1 > 0) mapa[xFinal - 1][y] = 0;
         }
     }
 
@@ -175,8 +192,8 @@ public class DungeonPT2 {
             CriarSala(salaParaConstruir);
         }
         criarCorredor();
-        //imprimirMapa();
-        //metodo imprimir mapa desabilitado, nao quero que apareça nada no console. (nao tem pra que...)
+        imprimirMapa();
+        //metodo imprimir mapa desabilitado
     }
 
     public int[][] getMapa(){

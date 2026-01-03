@@ -6,7 +6,9 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 
 import java.awt.Rectangle;
@@ -18,10 +20,18 @@ public class MainGame extends ApplicationAdapter {
     DungeonPT2 dungeon;
 
     //Texturas do jogo
-    Texture imgChao;
-    Texture imgParede;
-    Texture imgPlayer;
-    Texture imgLuz;
+    Texture imgChao, imgParede,  imgPlayer, imgLuz;
+
+    //Variaveis de animação
+    Texture sheetPlayer;
+    Animation<TextureRegion> animBaixo,animCima,animEsquerda, animDireita;
+    TextureRegion frameatual;
+
+    //Qual lado esta olhando
+    // 0 = baixo ; 1 = dir ; 2 = esq ; 3 = cima
+    int dir_atual = 0; // A padrao é 0
+
+    float temp_anim = 0f;
 
     //Configuraçao
     int tamanhoTile = 32;
@@ -34,7 +44,7 @@ public class MainGame extends ApplicationAdapter {
     //Float para ser preciso e suave
     float playerX, playerY;
 
-    float velocidade = 150f; //150 pixeis por segundo
+    float velocidade = 120f; //150 pixeis por segundo
 
     @Override
     public void create(){
@@ -52,10 +62,26 @@ public class MainGame extends ApplicationAdapter {
         imgParede= new Texture("parede.png");
         imgLuz = new Texture("luz.png");
 
+        //Carregar a sprite sheet
+        sheetPlayer = new Texture("astronauta_anim.png");
+
+
         //Filtro para nao deixar a imagem borrada
+        sheetPlayer.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         imgPlayer.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         imgChao.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         imgParede.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
+        // Divide a imagem grande em pedacinhos de 32x32
+        // 'tmp' é uma matriz: tmp[LINHA][COLUNA]
+        TextureRegion[][] tmp = TextureRegion.split(sheetPlayer, 32, 32);
+
+        //Configura as animações (0.15f é a velocidade, quanto menor mais rapido)
+        // O numero do array tmp é em relaçao a linha de animação da sprite sheet
+        animBaixo = new Animation<>(0.1f, tmp[0]);
+        animDireita = new Animation<>(0.1f, tmp[1]);
+        animEsquerda = new Animation<>(0.1f, tmp[2]);
+        animCima = new Animation<>(0.1f, tmp[3]);
 
         //Gera a dungeon
         dungeon=new DungeonPT2(larguraMapa,alturaMapa);
@@ -74,7 +100,7 @@ public class MainGame extends ApplicationAdapter {
     @Override
     public void render(){
         //Logica do movimento do boneco
-        moverJogador();
+        boolean estaAndando= moverJogador();
 
         //Pra camera seguir o boneco
         camera.position.set(playerX, playerY, 0);
@@ -84,6 +110,23 @@ public class MainGame extends ApplicationAdapter {
         //Limpa a tela
         Gdx.gl.glClearColor(0,0,0,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        //Logica de escolher o frame
+        if(estaAndando){
+            temp_anim += Gdx.graphics.getDeltaTime();
+        }else{
+            temp_anim = 0;
+        }
+        // Escolhe qual animação usar baseado na última direção
+        if(dir_atual == 0){
+            frameatual = animBaixo.getKeyFrame(temp_anim, true);
+        }else if(dir_atual == 1){
+            frameatual = animDireita.getKeyFrame(temp_anim, true);
+        }else if(dir_atual == 2){
+            frameatual = animEsquerda.getKeyFrame(temp_anim, true);
+        }else if(dir_atual == 3){
+            frameatual = animCima.getKeyFrame(temp_anim, true);
+        }
 
         batch.begin();
 
@@ -109,7 +152,7 @@ public class MainGame extends ApplicationAdapter {
             }
         }
         //Desenha o jogador
-        batch.draw(imgPlayer, playerX-16,playerY-16);
+        batch.draw(frameatual, playerX-16,playerY-16);
 
         //Desenha a vinheta de sombra
         float larguraLuz = 1000;
@@ -123,7 +166,7 @@ public class MainGame extends ApplicationAdapter {
 
 
     //Funçao de mover o jogador
-    public void moverJogador(){
+    public Boolean moverJogador(){
 
         //Logica refeita para ter movimento livre
 
@@ -137,18 +180,29 @@ public class MainGame extends ApplicationAdapter {
         float novaX = playerX;
         float novaY = playerY;
 
+        // Variavel para saber se o boneco mexeu.
+        boolean andou = false;
+
         // Note: isKeyPressed (contínuo) em vez de isKeyJustPressed (toque único)
         if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
             novaY += velocidade * dt;
+            dir_atual = 3;
+            andou = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
             novaY -= velocidade * dt;
+            dir_atual = 0;
+            andou = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             novaX -= velocidade * dt;
+            dir_atual = 2;
+            andou = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             novaX += velocidade * dt;
+            dir_atual = 1;
+            andou = true;
         }
 
         //Verificaçao de colisao
@@ -160,6 +214,9 @@ public class MainGame extends ApplicationAdapter {
         if (!colideComParede(playerX, novaY)) {
             playerY = novaY;
         }
+
+        return andou;
+
     }
 
 

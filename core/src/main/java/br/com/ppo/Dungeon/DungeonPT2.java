@@ -79,7 +79,7 @@ public class DungeonPT2 {
     /*
      * Olha, como posso explicar essa parte de gerar o corredor?
      * Parece ser simples, e é. Porém pra chegar nisso foi um bom quebra cabeça.
-     * Bom quandoeu aciono a função salaAleatoria(), ele cria um retangle com
+     * Bom quando eu aciono a função salaAleatoria(), ele cria um retangle com
      * tamanhos dentro do limite
      * que estabeleci e joga ele dentro de um ArrayList para facil acesso de
      * dimensões.

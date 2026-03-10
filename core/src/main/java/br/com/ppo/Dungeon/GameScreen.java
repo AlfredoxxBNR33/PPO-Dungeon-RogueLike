@@ -9,48 +9,43 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import java.awt.Rectangle;
-
-import java.awt.*;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 public class GameScreen implements Screen {
 
     final MainGame game;
 
-    //Cameras
+    // Cameras
     OrthographicCamera camera;
     OrthographicCamera uiCamera;
 
-    //Logica do jogo
+    // Lógica do jogo
     DungeonPT2 dungeon;
+    Jogador jogador; // Nosso jogador, agora em uma classe separada
 
-    //Texturas
-    Texture imgChao, imgParede, imgLuz, sheetAstronauta;
-    Animation<TextureRegion> animBaixo, animCima, animEsq, animDir;
-    TextureRegion frameAtual;
+    // Texturas Gerais (o astronauta foi pra classe Jogador)
+    Texture imgChao, imgParede, imgLuz, sheetTiro;
+    Animation<TextureRegion> animacaoTiro;
 
-    // Variáveis
+    // Variáveis do Mapa
     int tamanhoTile = 32;
     int larguraMapa = 250;
     int alturaMapa = 250;
-    float playerX, playerY;
-    float velocidade = 150f;
-    int direcaoAtual = 0;
-    float tempoAnimacao = 0f;
 
-    // HUD Variáveis
-    int vida = 100;
+    // Variáveis do sistema de tiro
+    ArrayList<Tiro> listaTiros;
+    float tempoRecarga = 0;
 
+    public GameScreen(final MainGame game) {
+        this.game = game;
 
-    //Onde inicia tudo (antigo create)
-    public GameScreen (final MainGame game){
-        this.game=game;
-
-        //Câmera do Mundo (Zoom perto)
+        // Câmera do Mundo
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
         camera.zoom = 0.5f;
 
-        //Câmera do HUD (Sem Zoom, fixa)
+        // Câmera do HUD
         uiCamera = new OrthographicCamera();
         uiCamera.setToOrtho(false, 1280, 720);
 
@@ -58,72 +53,89 @@ public class GameScreen implements Screen {
         imgChao = new Texture("chao.png");
         imgParede = new Texture("parede.png");
         imgLuz = new Texture("luz.png");
-        sheetAstronauta = new Texture("astronauta_anim.png");
+        sheetTiro = new Texture("tiro.png");
+
+        // Lista de tiros
+        listaTiros = new ArrayList<>();
 
         // Filtros Pixel Art
-        sheetAstronauta.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         imgChao.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         imgParede.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        sheetTiro.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
+        // Preparando a Animação do Tiro
+        TextureRegion[][] tmpTiro = TextureRegion.split(sheetTiro, 32, 32);
+        TextureRegion[] framesTiro = new TextureRegion[2 * 3];
+        int index = 0;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 2; j++) {
+                framesTiro[index++] = tmpTiro[i][j];
+            }
+        }
+        animacaoTiro = new Animation<>(0.3f, framesTiro);
 
-        // Configura Animações
-        TextureRegion[][] tmp = TextureRegion.split(sheetAstronauta, 32, 32);
-        animBaixo = new Animation<>(0.15f, tmp[0]);
-        animDir   = new Animation<>(0.15f, tmp[1]);
-        animEsq   = new Animation<>(0.15f, tmp[2]);
-        animCima  = new Animation<>(0.15f, tmp[3]);
-
-        // Gera Dungeon
+        // Gera a Dungeon
         dungeon = new DungeonPT2(larguraMapa, alturaMapa);
         dungeon.gerarDungeon(40, 1000);
         Rectangle primeiraSala = dungeon.getSalas().get(0);
-        playerX = (primeiraSala.x * tamanhoTile) + (primeiraSala.width * tamanhoTile / 2f);
-        playerY = (primeiraSala.y * tamanhoTile) + (primeiraSala.height * tamanhoTile / 2f);
 
+        // Posição inicial baseada na primeira sala
+        float startX = (primeiraSala.x * tamanhoTile) + (primeiraSala.width * tamanhoTile / 2f);
+        float startY = (primeiraSala.y * tamanhoTile) + (primeiraSala.height * tamanhoTile / 2f);
 
+        // Cria o jogador bem no meio da primeira sala
+        jogador = new Jogador(startX, startY);
     }
 
     @Override
-    public void render(float delta){
+    public void render(float delta) {
 
-        //logica de andar
-        boolean andou = moverJogador(delta);
+        // Atualiza a física e movimentação do jogador
+        jogador.update(delta, dungeon, tamanhoTile, larguraMapa, alturaMapa);
 
-        if(andou){
-            tempoAnimacao+=delta;
-        }else{
-            tempoAnimacao=0;
+        // Lógica de atirar
+        if (tempoRecarga > 0) {
+            tempoRecarga -= delta;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.SPACE) && tempoRecarga <= 0) {
+            // Cria o tiro saindo da posição atual do jogador
+            listaTiros.add(new Tiro(jogador.x - 15, jogador.y - 18, jogador.direcaoAtual, animacaoTiro));
+            tempoRecarga = 0.4f;
         }
 
-        if (direcaoAtual == 0) frameAtual = animBaixo.getKeyFrame(tempoAnimacao, true);
-        else if (direcaoAtual == 1) frameAtual = animCima.getKeyFrame(tempoAnimacao, true);
-        else if (direcaoAtual == 2) frameAtual = animEsq.getKeyFrame(tempoAnimacao, true);
-        else if (direcaoAtual == 3) frameAtual = animDir.getKeyFrame(tempoAnimacao, true);
+        // Atualizar tiros
+        Iterator<Tiro> iter = listaTiros.iterator();
+        while (iter.hasNext()) {
+            Tiro t = iter.next();
+            t.update(delta);
 
-        // Limpeza de Tela (Cor marrom escura para evitar texture bleeding)
+            // Verifica colisão do tiro com a parede
+            if (eParede(t.x, t.y)) {
+                t.deveRemover = true;
+            }
+
+            if (t.deveRemover) {
+                iter.remove();
+            }
+        }
+
+        // --- INÍCIO DO DESENHO ---
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        //Começar a desenhar o mundo
-
-        //------------------
-        //Inicializando camera
-        //------------
-
-        camera.position.set((int) playerX, (int)playerY,0); // esse 0 evita tremedeira
+        // Atualiza Câmera seguindo o jogador
+        camera.position.set((int) jogador.x, (int) jogador.y, 0);
         camera.update();
         game.batch.setProjectionMatrix(camera.combined);
 
         game.batch.begin();
 
-
-        //Desenha o mapa
-
+        // Desenha o mapa
         int visao = 20;
-        int centrox = (int) (playerX / tamanhoTile);
-        int centroy = (int) (playerY / tamanhoTile);
+        int centrox = (int) (jogador.x / tamanhoTile);
+        int centroy = (int) (jogador.y / tamanhoTile);
 
-        for(int x = centrox - visao; x < centrox + visao; x++) {
+        for (int x = centrox - visao; x < centrox + visao; x++) {
             for (int y = centroy - visao; y < centroy + visao; y++) {
                 if (x >= 0 && x < larguraMapa && y >= 0 && y < alturaMapa) {
                     if (dungeon.getMapa()[x][y] == 1) {
@@ -135,71 +147,35 @@ public class GameScreen implements Screen {
             }
         }
 
-        // Desenha Player e Luz
-        game.batch.draw(frameAtual, playerX - 16, playerY - 16);
+        // Desenha os tiros
+        for (Tiro t : listaTiros) {
+            t.render(game.batch);
+        }
+
+        // Desenha o jogador
+        jogador.render(game.batch);
+
+        // Desenha a Luz
         float luzSize = 1000;
-        game.batch.draw(imgLuz, playerX - (luzSize/2), playerY - (luzSize/2), luzSize, luzSize);
+        game.batch.draw(imgLuz, jogador.x - (luzSize / 2), jogador.y - (luzSize / 2), luzSize, luzSize);
 
         game.batch.end();
 
-        //Desenhar o HUD (que fica travado
-
-        // Escreve na tela usando a fonte do MainGame
-        // Coordenadas: 0,0 é o canto inferior esquerdo.
-        // 20, 580 é o canto superior esquerdo (quase no topo)
-        // ---------------------------------------------------------
-        // Desenhar o HUD (Interface)
-        // ---------------------------------------------------------
-
-        // 1. Atualiza a câmera UI
-        uiCamera.update(); // É bom garantir
-
-        // 2. AVISA O BATCH PARA USAR A CÂMERA DE UI AGORA
+        // --- DESENHO DO HUD ---
+        uiCamera.update();
         game.batch.setProjectionMatrix(uiCamera.combined);
-
         game.batch.begin();
-
         game.font.setColor(1, 1, 1, 1);
-
-        // Pega a altura atual da câmera (para funcionar em qualquer resolução)
         float altura = uiCamera.viewportHeight;
-        float largura = uiCamera.viewportWidth;
 
-
-        // TEXTO NO TOPO: Use 'altura - valor' em vez de numero fixo (580)
-        // Assim, se a tela for pequena, o texto desce junto.
-        game.font.draw(game.batch, "VIDA: " + vida + "%", 20, altura - 20);
+        // Puxa o valor da vida direto do objeto jogador
+        game.font.draw(game.batch, "VIDA: " + jogador.vida + "%", 20, altura - 20);
         game.font.draw(game.batch, "FPS: " + Gdx.graphics.getFramesPerSecond(), 20, altura - 40);
-
         game.batch.end();
     }
 
-    public boolean moverJogador(float dt){
-        float novaX = playerX;
-        float novaY = playerY;
-        boolean moveu = false;
-
-        if (Gdx.input.isKeyPressed(Input.Keys.UP)) { novaY += velocidade * dt; direcaoAtual = 1; moveu = true; }
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) { novaY -= velocidade * dt; direcaoAtual = 0; moveu = true; }
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) { novaX -= velocidade * dt; direcaoAtual = 2; moveu = true; }
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) { novaX += velocidade * dt; direcaoAtual = 3; moveu = true; }
-
-        if (!colideComParede(novaX, playerY)) playerX = novaX;
-        if (!colideComParede(playerX, novaY)) playerY = novaY;
-
-        return moveu;
-    }
-
-    private boolean colideComParede(float x, float y) {
-        float margem = 14f;
-        if (eParede(x - margem, y - margem)) return true;
-        if (eParede(x + margem, y - margem)) return true;
-        if (eParede(x - margem, y + margem)) return true;
-        if (eParede(x + margem, y + margem)) return true;
-        return false;
-    }
-
-    private boolean eParede (float x, float y){
+    // Função pra checar paredes (deixei aqui porque o tiro usa também)
+    private boolean eParede(float x, float y) {
         int tileX = (int) (x / tamanhoTile);
         int tileY = (int) (y / tamanhoTile);
         if (tileX < 0 || tileX >= larguraMapa || tileY < 0 || tileY >= alturaMapa) return true;
@@ -208,14 +184,9 @@ public class GameScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
-        // Atualiza a câmera do jogo (mantém o zoom)
         camera.viewportWidth = width;
         camera.viewportHeight = height;
         camera.update();
-
-        // --- O PULO DO GATO ---
-        // Reinicia a câmera de UI para ter exatamente o tamanho da tela (pixel por pixel)
-        // O 'true' ali centraliza a câmera (opcional), mas o 'setToOrtho(false...)' define a origem no canto inferior esquerdo.
         uiCamera.setToOrtho(false, width, height);
         uiCamera.update();
     }
@@ -230,7 +201,7 @@ public class GameScreen implements Screen {
         imgChao.dispose();
         imgParede.dispose();
         imgLuz.dispose();
-        sheetAstronauta.dispose();
+        sheetTiro.dispose();
+        jogador.dispose(); // Limpando a memória do jogador
     }
-
 }

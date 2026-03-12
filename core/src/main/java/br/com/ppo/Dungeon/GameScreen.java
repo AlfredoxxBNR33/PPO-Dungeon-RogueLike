@@ -30,12 +30,16 @@ public class GameScreen implements Screen {
 
     // Variáveis do Mapa
     int tamanhoTile = 32;
-    int larguraMapa = 250;
-    int alturaMapa = 250;
+    int larguraMapa = 50; //250
+    int alturaMapa = 50;  //250
 
     // Variáveis do sistema de tiro
     ArrayList<Tiro> listaTiros;
     float tempoRecarga = 0;
+
+    // Variaveis do spawn de inimigos
+    ArrayList<Inimigo> listaInimigo;
+
 
     public GameScreen(final MainGame game) {
         this.game = game;
@@ -76,7 +80,7 @@ public class GameScreen implements Screen {
 
         // Gera a Dungeon
         dungeon = new DungeonPT2(larguraMapa, alturaMapa);
-        dungeon.gerarDungeon(40, 1000);
+        dungeon.gerarDungeon(2, 1000);
         Rectangle primeiraSala = dungeon.getSalas().get(0);
 
         // Posição inicial baseada na primeira sala
@@ -85,6 +89,15 @@ public class GameScreen implements Screen {
 
         // Cria o jogador bem no meio da primeira sala
         jogador = new Jogador(startX, startY);
+        // Cria inimigo
+        listaInimigo = new ArrayList<>();
+
+        //Pega a segunda sala gerada
+        Rectangle segundaSala = dungeon.getSalas().get(1);
+        float inimigoX = (segundaSala.x * tamanhoTile) + (segundaSala.width * tamanhoTile /2f);
+        float inimigoY = (segundaSala.y * tamanhoTile) + (segundaSala.height * tamanhoTile /2f);
+
+        listaInimigo.add((new Inimigo(inimigoX,inimigoY)));
     }
 
     @Override
@@ -116,6 +129,18 @@ public class GameScreen implements Screen {
 
             if (t.deveRemover) {
                 iter.remove();
+            }
+        }
+
+        Iterator<Inimigo> iterInimigo = listaInimigo.iterator();
+        while(iterInimigo.hasNext()){
+            Inimigo inimigo = iterInimigo.next();
+
+            inimigo.update(delta, jogador.x, jogador.y, dungeon, tamanhoTile, larguraMapa, alturaMapa);
+
+            if(inimigo.deveRemover){
+                inimigo.dispose();
+                iterInimigo.remove();
             }
         }
 
@@ -151,9 +176,14 @@ public class GameScreen implements Screen {
         for (Tiro t : listaTiros) {
             t.render(game.batch);
         }
-
+        // Desenha os inimigos
+        for(Inimigo i : listaInimigo){
+            i.render(game.batch);
+        }
         // Desenha o jogador
         jogador.render(game.batch);
+
+        //Desenha
 
         // Desenha a Luz
         float luzSize = 1000;
@@ -202,6 +232,10 @@ public class GameScreen implements Screen {
         imgParede.dispose();
         imgLuz.dispose();
         sheetTiro.dispose();
-        jogador.dispose(); // Limpando a memória do jogador
+        jogador.dispose();
+
+        for(Inimigo i : listaInimigo){
+            i.dispose();
+        }
     }
 }

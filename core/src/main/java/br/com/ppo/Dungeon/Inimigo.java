@@ -18,13 +18,15 @@ public class Inimigo {
 
     Texture imgInimigo;
     public Rectangle hitBox;
+
+
     public Inimigo (float xInicial,float yInicial){
         this.x = xInicial;
         this.y = yInicial;
 
         imgInimigo = new Texture("alien.png");
 
-        hitBox= new Rectangle(x, y, 32, 32);
+        hitBox= new Rectangle(x+12f, y+12f, 24, 24);
     }
 
     public void update (float dt, float alvoX, float alvoY, DungeonPT2 dungeon, int tamanhoTile, int larguraMapa, int alturaMapa){
@@ -49,11 +51,17 @@ public class Inimigo {
             if (alvoY < y) {
                 novaY -= velocidade * dt;
             }
+            hitBox.setPosition(novaX + 12f, y + 12f);
+            if (!GerenciadorColisao.colideComParede(hitBox, dungeon, tamanhoTile, larguraMapa, alturaMapa)) {
+                x = novaX; // Se estiver livre, o inimigo dá o passo real
+            }
 
-            if (!colideComParede(novaX, y, dungeon, tamanhoTile, larguraMapa, alturaMapa)) x = novaX;
-            if (!colideComParede(x, novaY, dungeon, tamanhoTile, larguraMapa, alturaMapa)) y = novaY;
+            hitBox.setPosition(x + 12f, novaY + 12f);
+            if (!GerenciadorColisao.colideComParede(hitBox, dungeon, tamanhoTile, larguraMapa, alturaMapa)) {
+                y = novaY;
+            }
         }
-        hitBox.setPosition(x,y);
+        hitBox.setPosition(x-12f,y-12f);
 
         if(vida<=0){
             deveRemover=true;
@@ -64,31 +72,15 @@ public class Inimigo {
         batch.draw(imgInimigo,x-16,y-16);
     }
 
-    private boolean colideComParede(float testeX,float testeY, DungeonPT2 dungeon, int tamanhoTile, int larguraMapa, int alturaMapa){
-        float margem = 4f;
-        if(eParede(testeX+margem, testeY+margem, dungeon, tamanhoTile,larguraMapa,alturaMapa )){
-            return true;
-        }if(eParede (testeX+32 - margem, testeY+margem, dungeon, tamanhoTile,larguraMapa,alturaMapa )){
-            return true;
-        }if(eParede(testeX+margem, testeY + 32 - margem, dungeon, tamanhoTile,larguraMapa,alturaMapa)){
-            return true;
-        }if(eParede(testeX+margem, testeY +32 - margem, dungeon, tamanhoTile, larguraMapa, alturaMapa)){
-            return true;
-        }
-        return false;
-    }
-
-    private boolean eParede(float testeX,float testeY, DungeonPT2 dungeon, int tamanhoTile, int larguraMapa, int alturaMapa){
-        int tileX = (int) (testeX/tamanhoTile);
-        int tileY = (int) (testeY/tamanhoTile);
-        if(tileX < 0 || tileX >= larguraMapa || tileY < 0 || tileY >=alturaMapa){
-            return true;
-        }
-        return  dungeon.getMapa()[tileX][tileY]==1;
-    }
-
-
     public void dispose(){
         imgInimigo.dispose();
+    }
+
+    public Rectangle getHitbox(){
+        return hitBox;
+    }
+
+    public void darDano(int dano){
+        this.vida -= dano;
     }
 }

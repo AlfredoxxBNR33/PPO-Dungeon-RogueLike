@@ -11,9 +11,10 @@ public class Tiro {
 
     // posição e velocidade
     float x, y;
-    float velocidade = 400f; // mais rapido que o player
+    float velocidade = 250f; // mais rapido que o player
     float velX, velY; // direçao de movimento
     float rotacao; // define a rotação da animação de tiro. Os valores serão definidos em GRAU.
+
 
 
     //Recebida de fora para economizar memoria
@@ -31,7 +32,7 @@ public class Tiro {
         this.x = xInicial;
         this.y = yInicial;
         this.animacao = animRecebida;
-        this.retanguloColisao = new Rectangle(x, y, 8, 8); // Tamanho pequeno (8x8)
+        this.retanguloColisao = new Rectangle(x, y, 16, 16); // Tamanho pequeno (8x8)
 
         // Define a direção com base no input do Player (0=Baixo, 1=Cima, 2=Esq, 3=Dir)
         // Isso aqui deixa modular: se o player mudar a lógica de direção, o tiro se adapta
@@ -59,7 +60,7 @@ public class Tiro {
         }
     }
 
-    public void update (float dt){
+    public void update (float dt,DungeonPT2 dungeon, int tamanhoTile, int larguraMapa, int alturaMapa){
 
         // A física básica: Posição = Posição Anterior + (Velocidade * Tempo)
         x+= velX * velocidade * dt;
@@ -72,7 +73,7 @@ public class Tiro {
 
         //Contagem regressiva para sumir
         tempoMaximo -=dt;
-        if(tempoMaximo <=0){
+        if(GerenciadorColisao.colideComParede(retanguloColisao, dungeon, tamanhoTile, larguraMapa, alturaMapa) || tempoMaximo <= 0){
             deveRemover=true;
         }
     }

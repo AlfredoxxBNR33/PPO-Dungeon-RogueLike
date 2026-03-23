@@ -117,18 +117,23 @@ public class GameScreen implements Screen {
         }
 
         // Atualizar tiros
-        Iterator<Tiro> iter = listaTiros.iterator();
-        while (iter.hasNext()) {
-            Tiro t = iter.next();
-            t.update(delta);
+        Iterator<Tiro> iterTiro = listaTiros.iterator();
+        while (iterTiro.hasNext()) {
+            Tiro t = iterTiro.next();
+            t.update(delta,dungeon,tamanhoTile,larguraMapa,alturaMapa);
 
-            // Verifica colisão do tiro com a parede
-            if (eParede(t.x, t.y)) {
-                t.deveRemover = true;
+            boolean acertouAlvo = false;
+
+            for(Inimigo inimigo : listaInimigo){
+                if(t.retanguloColisao.overlaps(inimigo.getHitbox())){
+                    inimigo.darDano(1);
+                    acertouAlvo=true;
+                    break;
+                }
             }
 
-            if (t.deveRemover) {
-                iter.remove();
+            if(acertouAlvo || t.deveRemover){
+                iterTiro.remove();
             }
         }
 

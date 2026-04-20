@@ -16,6 +16,9 @@ public class GameScreen implements Screen {
 
     final MainGame game;
 
+
+    //algumas variaveis de mundo
+    int numKills = 0;
     // Cameras
     OrthographicCamera camera;
     OrthographicCamera uiCamera;
@@ -127,6 +130,9 @@ public class GameScreen implements Screen {
             for(Inimigo inimigo : listaInimigo){
                 if(t.retanguloColisao.overlaps(inimigo.getHitbox())){
                     inimigo.darDano(1);
+                    if(inimigo.getVida()<=0) {
+                        numKills++;
+                    }
                     acertouAlvo=true;
                     break;
                 }
@@ -142,6 +148,12 @@ public class GameScreen implements Screen {
             Inimigo inimigo = iterInimigo.next();
 
             inimigo.update(delta, jogador.x, jogador.y, dungeon, tamanhoTile, larguraMapa, alturaMapa);
+
+            //regra para dar dano
+            if(inimigo.getHitbox().overlaps(jogador.getHitbox())){
+                jogador.levarDano(20);
+                inimigo.deveRemover = true;
+            }
 
             if(inimigo.deveRemover){
                 inimigo.dispose();
@@ -204,8 +216,9 @@ public class GameScreen implements Screen {
         float altura = uiCamera.viewportHeight;
 
         // Puxa o valor da vida direto do objeto jogador
-        game.font.draw(game.batch, "VIDA: " + jogador.vida + "%", 20, altura - 20);
+        game.font.draw(game.batch, "VIDA: " + jogador.getVida(), 20, altura - 20);
         game.font.draw(game.batch, "FPS: " + Gdx.graphics.getFramesPerSecond(), 20, altura - 40);
+        game.font.draw(game.batch, "Kills: " + numKills, 20,altura-60);
         game.batch.end();
     }
 

@@ -4,6 +4,8 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
+import java.awt.*;
+
 public class MainGame extends Game {
 
     // Essas variáveis são públicas para que qualquer tela possa acessar
@@ -19,7 +21,7 @@ public class MainGame extends Game {
 
         // Aqui dizemos: "Gerente, comece o trabalho pela tela do Jogo"
         // No futuro, mudaremos para: setScreen(new MenuScreen(this));
-        this.setScreen(new GameScreen(this));
+        this.setScreen(new MenuScreen(this));
     }
 
     @Override

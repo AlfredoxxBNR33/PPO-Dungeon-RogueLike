@@ -83,4 +83,8 @@ public class Inimigo {
     public void darDano(int dano){
         this.vida -= dano;
     }
+
+    public int getVida(){
+        return this.vida;
+    }
 }

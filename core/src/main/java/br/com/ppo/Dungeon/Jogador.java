@@ -85,7 +85,17 @@ public class Jogador {
     public void dispose() {
         sheetAstronauta.dispose();
     }
-
+    public String levarDano(int dano){
+        this.vida-=dano;
+        return "jogador levou "+dano+" pontos de dano.";
+    }
+    public String Curar(int cura){
+        this.vida+=cura;
+        return "Jogador curado em "+cura+" pontos.";
+    }
+    public int getVida(){
+        return this.vida;
+    }
     // Método útil para quando o inimigo for atacar o jogador
     public Rectangle getHitbox() {
         return hitBox;

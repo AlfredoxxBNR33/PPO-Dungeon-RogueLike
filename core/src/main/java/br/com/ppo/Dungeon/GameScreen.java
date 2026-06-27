@@ -16,8 +16,7 @@ public class GameScreen implements Screen {
 
     final MainGame game;
 
-
-    //algumas variaveis de mundo
+    // algumas variaveis de mundo
     int numKills = 0;
     // Cameras
     OrthographicCamera camera;
@@ -33,8 +32,10 @@ public class GameScreen implements Screen {
 
     // Variáveis do Mapa
     int tamanhoTile = 32;
-    int larguraMapa = 50; //250
-    int alturaMapa = 50;  //250
+    int larguraMapa = 50; // 250
+    int alturaMapa = 50; // 250
+    int salas = 20;
+    int tentativas = 1000;
 
     // Variáveis do sistema de tiro
     ArrayList<Tiro> listaTiros;
@@ -42,7 +43,9 @@ public class GameScreen implements Screen {
 
     // Variaveis do spawn de inimigos
     ArrayList<Inimigo> listaInimigo;
-
+    float tempoSpawn = 0;
+    float intervaloSpawn = 5f;
+    int maxInimigos = 30; // Limite de inimigos na tela para evitar sobrecarga
 
     public GameScreen(final MainGame game) {
         this.game = game;
@@ -83,7 +86,7 @@ public class GameScreen implements Screen {
 
         // Gera a Dungeon
         dungeon = new DungeonPT2(larguraMapa, alturaMapa);
-        dungeon.gerarDungeon(2, 1000);
+        dungeon.gerarDungeon(salas, tentativas);
         Rectangle primeiraSala = dungeon.getSalas().get(0);
 
         // Posição inicial baseada na primeira sala
@@ -95,12 +98,12 @@ public class GameScreen implements Screen {
         // Cria inimigo
         listaInimigo = new ArrayList<>();
 
-        //Pega a segunda sala gerada
+        // Pega a segunda sala gerada
         Rectangle segundaSala = dungeon.getSalas().get(1);
-        float inimigoX = (segundaSala.x * tamanhoTile) + (segundaSala.width * tamanhoTile /2f);
-        float inimigoY = (segundaSala.y * tamanhoTile) + (segundaSala.height * tamanhoTile /2f);
+        float inimigoX = (segundaSala.x * tamanhoTile) + (segundaSala.width * tamanhoTile / 2f);
+        float inimigoY = (segundaSala.y * tamanhoTile) + (segundaSala.height * tamanhoTile / 2f);
 
-        listaInimigo.add((new Inimigo(inimigoX,inimigoY)));
+        listaInimigo.add((new Inimigo(inimigoX, inimigoY)));
     }
 
     @Override
@@ -118,44 +121,81 @@ public class GameScreen implements Screen {
             listaTiros.add(new Tiro(jogador.x - 15, jogador.y - 18, jogador.direcaoAtual, animacaoTiro));
             tempoRecarga = 0.4f;
         }
+        tempoSpawn += delta;
+        if (tempoSpawn >= intervaloSpawn && listaInimigo.size() < maxInimigos) {
+            Rectangle salaSelecionada = dungeon.getSalas().get((int) (Math.random() * dungeon.getSalas().size()));
 
+            // Tenta até 10 vezes encontrar uma posição segura
+            boolean spawnouComSucesso = false;
+            for (int tentativa = 0; tentativa < 10; tentativa++) {
+                // Gera posição mais pro interior da sala, evitando bordas
+                float offset = 0.2f; // Mantém 20% de distância das bordas
+                float xx = (float) ((salaSelecionada.x + offset + Math.random() * (salaSelecionada.width - offset * 2))
+                        * tamanhoTile);
+                float yy = (float) ((salaSelecionada.y + offset + Math.random() * (salaSelecionada.height - offset * 2))
+                        * tamanhoTile);
+
+                Inimigo novoInimigo = new Inimigo(xx, yy);
+
+                // Verifica colisão com outros inimigos (com distância mínima)
+                boolean podeSpawnar = true;
+                float distanciaMinima = 80f; // Pelo menos 80 pixels de distância
+                for (Inimigo inimigo : listaInimigo) {
+                    float dx = novoInimigo.x - inimigo.x;
+                    float dy = novoInimigo.y - inimigo.y;
+                    float distancia = (float) Math.sqrt(dx * dx + dy * dy);
+                    if (distancia < distanciaMinima) {
+                        podeSpawnar = false;
+                        novoInimigo.dispose();
+                        break;
+                    }
+                }
+
+                if (podeSpawnar) {
+                    listaInimigo.add(novoInimigo);
+                    tempoSpawn = 0;
+                    spawnouComSucesso = true;
+                    break;
+                }
+            }
+        }
         // Atualizar tiros
         Iterator<Tiro> iterTiro = listaTiros.iterator();
         while (iterTiro.hasNext()) {
             Tiro t = iterTiro.next();
-            t.update(delta,dungeon,tamanhoTile,larguraMapa,alturaMapa);
+            t.update(delta, dungeon, tamanhoTile, larguraMapa, alturaMapa);
 
             boolean acertouAlvo = false;
 
-            for(Inimigo inimigo : listaInimigo){
-                if(t.retanguloColisao.overlaps(inimigo.getHitbox())){
+            for (Inimigo inimigo : listaInimigo) {
+                if (t.retanguloColisao.overlaps(inimigo.getHitbox())) {
                     inimigo.darDano(1);
-                    if(inimigo.getVida()<=0) {
+                    if (inimigo.getVida() <= 0) {
                         numKills++;
                     }
-                    acertouAlvo=true;
+                    acertouAlvo = true;
                     break;
                 }
             }
 
-            if(acertouAlvo || t.deveRemover){
+            if (acertouAlvo || t.deveRemover) {
                 iterTiro.remove();
             }
         }
 
         Iterator<Inimigo> iterInimigo = listaInimigo.iterator();
-        while(iterInimigo.hasNext()){
+        while (iterInimigo.hasNext()) {
             Inimigo inimigo = iterInimigo.next();
 
-            inimigo.update(delta, jogador.x, jogador.y, dungeon, tamanhoTile, larguraMapa, alturaMapa);
+            inimigo.update(delta, jogador.x, jogador.y, dungeon, tamanhoTile, larguraMapa, alturaMapa, listaInimigo);
 
-            //regra para dar dano
-            if(inimigo.getHitbox().overlaps(jogador.getHitbox())){
-                jogador.levarDano(20);
-                inimigo.deveRemover = true;
+            // regra para dar dano
+            if (inimigo.getHitbox().overlaps(jogador.getHitbox())) {
+                jogador.levarDano(5);
+                inimigo.morrer();
             }
 
-            if(inimigo.deveRemover){
+            if (inimigo.deveRemover) {
                 inimigo.dispose();
                 iterInimigo.remove();
             }
@@ -194,13 +234,13 @@ public class GameScreen implements Screen {
             t.render(game.batch);
         }
         // Desenha os inimigos
-        for(Inimigo i : listaInimigo){
+        for (Inimigo i : listaInimigo) {
             i.render(game.batch);
         }
         // Desenha o jogador
         jogador.render(game.batch);
 
-        //Desenha
+        // Desenha
 
         // Desenha a Luz
         float luzSize = 1000;
@@ -215,20 +255,27 @@ public class GameScreen implements Screen {
         game.font.setColor(1, 1, 1, 1);
         float altura = uiCamera.viewportHeight;
 
+        int barraWidth = Math.max(96, jogador.frameBarraVidaAtual.getRegionWidth() * 4);
+        int barraHeight = Math.max(16, jogador.frameBarraVidaAtual.getRegionHeight() * 1);
+        game.batch.draw(jogador.frameBarraVidaAtual, 20, altura - 70, barraWidth, barraHeight);
+
         // Puxa o valor da vida direto do objeto jogador
         game.font.draw(game.batch, "VIDA: " + jogador.getVida(), 20, altura - 20);
         game.font.draw(game.batch, "FPS: " + Gdx.graphics.getFramesPerSecond(), 20, altura - 40);
-        game.font.draw(game.batch, "Kills: " + numKills, 20,altura-60);
+        game.font.draw(game.batch, "Kills: " + numKills, 20, altura - 60);
         game.batch.end();
     }
 
     // Função pra checar paredes (deixei aqui porque o tiro usa também)
-    private boolean eParede(float x, float y) {
-        int tileX = (int) (x / tamanhoTile);
-        int tileY = (int) (y / tamanhoTile);
-        if (tileX < 0 || tileX >= larguraMapa || tileY < 0 || tileY >= alturaMapa) return true;
-        return dungeon.getMapa()[tileX][tileY] == 1;
-    }
+    /*
+     * private boolean eParede(float x, float y) {
+     * int tileX = (int) (x / tamanhoTile);
+     * int tileY = (int) (y / tamanhoTile);
+     * if (tileX < 0 || tileX >= larguraMapa || tileY < 0 || tileY >= alturaMapa)
+     * return true;
+     * return dungeon.getMapa()[tileX][tileY] == 1;
+     * }
+     */
 
     @Override
     public void resize(int width, int height) {
@@ -239,10 +286,21 @@ public class GameScreen implements Screen {
         uiCamera.update();
     }
 
-    @Override public void show() {}
-    @Override public void pause() {}
-    @Override public void resume() {}
-    @Override public void hide() {}
+    @Override
+    public void show() {
+    }
+
+    @Override
+    public void pause() {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public void hide() {
+    }
 
     @Override
     public void dispose() {
@@ -252,7 +310,7 @@ public class GameScreen implements Screen {
         sheetTiro.dispose();
         jogador.dispose();
 
-        for(Inimigo i : listaInimigo){
+        for (Inimigo i : listaInimigo) {
             i.dispose();
         }
     }

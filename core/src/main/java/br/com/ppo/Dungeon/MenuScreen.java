@@ -1,6 +1,5 @@
 package br.com.ppo.Dungeon;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -10,9 +9,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 
-
-
-public class MenuScreen implements  Screen{
+public class MenuScreen implements Screen {
 
     final MainGame jogo;
     OrthographicCamera camera;
@@ -23,31 +20,28 @@ public class MenuScreen implements  Screen{
     Rectangle hitboxBotao;
     Vector3 toqueMouse;
 
-    public MenuScreen (final MainGame jogobase){
-        this.jogo=jogobase;
+    public MenuScreen(final MainGame jogobase) {
+        this.jogo = jogobase;
 
         camera = new OrthographicCamera();
-        camera.setToOrtho(false , 1980, 1080);
+        camera.setToOrtho(false, 800, 600);
 
         batch = new SpriteBatch();
 
         /*
-        texturas para carregar:
+         * texturas para carregar:
          */
         imgFundo = new Texture("fundo_menu.png");
         imgLogo = new Texture("logo.png");
         imgBotao = new Texture("botao_jogar.png");
-
-
-
 
         hitboxBotao = new Rectangle(800 / 2 - 100, 150, 200, 80);
         toqueMouse = new Vector3();
     }
 
     @Override
-    public void render (float delta){
-        ScreenUtils.clear(0,0,0,1);
+    public void render(float delta) {
+        ScreenUtils.clear(0, 0, 0, 1);
         camera.update();
         batch.setProjectionMatrix(camera.combined);
 
@@ -75,11 +69,26 @@ public class MenuScreen implements  Screen{
             }
         }
     }
-    @Override public void show() {}
-    @Override public void resize(int width, int height) {}
-    @Override public void pause() {}
-    @Override public void resume() {}
-    @Override public void hide() {}
+
+    @Override
+    public void show() {
+    }
+
+    @Override
+    public void resize(int width, int height) {
+    }
+
+    @Override
+    public void pause() {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public void hide() {
+    }
 
     @Override
     public void dispose() {

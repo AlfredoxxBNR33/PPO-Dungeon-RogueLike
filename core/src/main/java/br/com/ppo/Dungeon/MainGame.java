@@ -4,8 +4,6 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
-import java.awt.*;
-
 public class MainGame extends Game {
 
     // Essas variáveis são públicas para que qualquer tela possa acessar
@@ -26,7 +24,8 @@ public class MainGame extends Game {
 
     @Override
     public void render() {
-        // O Game.render() delega o desenho para a tela atual (GameScreen, MenuScreen, etc)
+        // O Game.render() delega o desenho para a tela atual (GameScreen, MenuScreen,
+        // etc)
         super.render();
     }
 

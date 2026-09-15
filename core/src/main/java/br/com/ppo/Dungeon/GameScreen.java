@@ -18,6 +18,11 @@ public class GameScreen implements Screen {
 
     // algumas variaveis de mundo
     int numKills = 0;
+    static final int KILLS_NECESSARIOS = 10;
+    boolean chaveLiberada = false;
+    float chaveX;
+    float chaveY;
+    java.awt.Rectangle hitboxChave;
     // Cameras
     OrthographicCamera camera;
     OrthographicCamera uiCamera;
@@ -27,7 +32,7 @@ public class GameScreen implements Screen {
     Jogador jogador; // Nosso jogador, agora em uma classe separada
 
     // Texturas Gerais (o astronauta foi pra classe Jogador)
-    Texture imgChao, imgParede, imgLuz, sheetTiro;
+    Texture imgChao, imgParede, imgLuz, sheetTiro, imgChave;
     Animation<TextureRegion> animacaoTiro;
 
     // Variáveis do Mapa
@@ -64,6 +69,7 @@ public class GameScreen implements Screen {
         imgParede = new Texture("parede.png");
         imgLuz = new Texture("luz.png");
         sheetTiro = new Texture("tiro.png");
+        imgChave = new Texture("chave.png");
 
         // Lista de tiros
         listaTiros = new ArrayList<>();
@@ -72,6 +78,7 @@ public class GameScreen implements Screen {
         imgChao.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         imgParede.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         sheetTiro.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        imgChave.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
         // Preparando a Animação do Tiro
         TextureRegion[][] tmpTiro = TextureRegion.split(sheetTiro, 32, 32);
@@ -111,6 +118,12 @@ public class GameScreen implements Screen {
 
         // Atualiza a física e movimentação do jogador
         jogador.update(delta, dungeon, tamanhoTile, larguraMapa, alturaMapa);
+
+        if (jogador.getVida() <= 0) {
+            game.setScreen(new GameoverScreen(game));
+            dispose();
+            return;
+        }
 
         // Lógica de atirar
         if (tempoRecarga > 0) {
@@ -172,6 +185,7 @@ public class GameScreen implements Screen {
                     inimigo.darDano(1);
                     if (inimigo.getVida() <= 0) {
                         numKills++;
+                        liberarChaveSeNecessario();
                     }
                     acertouAlvo = true;
                     break;
@@ -199,6 +213,12 @@ public class GameScreen implements Screen {
                 inimigo.dispose();
                 iterInimigo.remove();
             }
+        }
+
+        if (chaveLiberada && hitboxChave.contains(jogador.x, jogador.y)) {
+            game.setScreen(new VictoryScreen(game));
+            dispose();
+            return;
         }
 
         // --- INÍCIO DO DESENHO ---
@@ -240,6 +260,10 @@ public class GameScreen implements Screen {
         // Desenha o jogador
         jogador.render(game.batch);
 
+        if (chaveLiberada) {
+            game.batch.draw(imgChave, chaveX - 16, chaveY - 16, 32, 32);
+        }
+
         // Desenha
 
         // Desenha a Luz
@@ -252,17 +276,26 @@ public class GameScreen implements Screen {
         uiCamera.update();
         game.batch.setProjectionMatrix(uiCamera.combined);
         game.batch.begin();
-        game.font.setColor(1, 1, 1, 1);
         float altura = uiCamera.viewportHeight;
 
-        int barraWidth = Math.max(96, jogador.frameBarraVidaAtual.getRegionWidth() * 4);
-        int barraHeight = Math.max(16, jogador.frameBarraVidaAtual.getRegionHeight() * 1);
-        game.batch.draw(jogador.frameBarraVidaAtual, 20, altura - 70, barraWidth, barraHeight);
+        float escala = 3f; // Você pode testar 2f, 3f ou 4f para ver qual tamanho encaixa melhor na tela
+        float barraWidth = jogador.frameBarraVidaAtual.getRegionWidth() * escala;
+        float barraHeight = jogador.frameBarraVidaAtual.getRegionHeight() * escala;
+        game.batch.draw(jogador.frameBarraVidaAtual, 20, altura - 100, barraWidth, barraHeight);
 
-        // Puxa o valor da vida direto do objeto jogador
-        game.font.draw(game.batch, "VIDA: " + jogador.getVida(), 20, altura - 20);
-        game.font.draw(game.batch, "FPS: " + Gdx.graphics.getFramesPerSecond(), 20, altura - 40);
-        game.font.draw(game.batch, "Kills: " + numKills, 20, altura - 60);
+        game.font.getData().setScale(1.25f);
+        String objetivo = chaveLiberada
+                ? "CHAVE LIBERADA! Encontre a chave para vencer!"
+                : "OBJETIVO: Derrote 10 inimigos (" + numKills + "/10)";
+        desenharTextoComSombra(objetivo, 20, altura - 125, 1f, 0.85f, 0.25f, 1f);
+
+        // Debug do HUD:
+        // game.font.setColor(1, 1, 1, 1);
+        // game.font.draw(game.batch, "VIDA: " + jogador.getVida(), 20, altura - 20);
+        // game.font.draw(game.batch, "FPS: " + Gdx.graphics.getFramesPerSecond(), 20,
+        // altura - 40);
+        // game.font.draw(game.batch, "Kills: " + numKills, 20, altura - 60);
+        game.font.getData().setScale(1f);
         game.batch.end();
     }
 
@@ -308,10 +341,31 @@ public class GameScreen implements Screen {
         imgParede.dispose();
         imgLuz.dispose();
         sheetTiro.dispose();
+        imgChave.dispose();
         jogador.dispose();
 
         for (Inimigo i : listaInimigo) {
             i.dispose();
         }
+    }
+
+    private void liberarChaveSeNecessario() {
+        if (chaveLiberada || numKills < KILLS_NECESSARIOS) {
+            return;
+        }
+
+        Rectangle salaChave = dungeon.getSalas().get(dungeon.getSalas().size() - 1);
+        chaveX = salaChave.x * tamanhoTile + salaChave.width * tamanhoTile / 2f;
+        chaveY = salaChave.y * tamanhoTile + salaChave.height * tamanhoTile / 2f;
+        hitboxChave = new java.awt.Rectangle((int) chaveX - 16, (int) chaveY - 16, 32, 32);
+        chaveLiberada = true;
+    }
+
+    private void desenharTextoComSombra(String texto, float x, float y, float vermelho, float verde,
+            float azul, float alfa) {
+        game.font.setColor(0f, 0f, 0f, alfa);
+        game.font.draw(game.batch, texto, x + 3, y - 3);
+        game.font.setColor(vermelho, verde, azul, alfa);
+        game.font.draw(game.batch, texto, x, y);
     }
 }

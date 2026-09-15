@@ -15,9 +15,9 @@ public class MenuScreen implements Screen {
     OrthographicCamera camera;
     private SpriteBatch batch;
 
-    Texture imgFundo, imgLogo, imgBotao;
+    Texture imgFundo, imgLogo, imgBotao, imgBotaoSair;
 
-    Rectangle hitboxBotao;
+    Rectangle hitboxBotao, hitboxSair;
     Vector3 toqueMouse;
 
     public MenuScreen(final MainGame jogobase) {
@@ -32,10 +32,12 @@ public class MenuScreen implements Screen {
          * texturas para carregar:
          */
         imgFundo = new Texture("fundo_menu.png");
-        imgLogo = new Texture("logo.png");
+        // imgLogo = new Texture("logo.png");
         imgBotao = new Texture("botao_jogar.png");
+        imgBotaoSair = new Texture("botao_sair.png");
 
-        hitboxBotao = new Rectangle(800 / 2 - 100, 150, 200, 80);
+        hitboxBotao = new Rectangle(800 / 2 - 100, 140, 200, 100);
+        hitboxSair = new Rectangle(800 / 2 - 100, 20, 200, 100);
         toqueMouse = new Vector3();
     }
 
@@ -51,10 +53,11 @@ public class MenuScreen implements Screen {
         batch.draw(imgFundo, 0, 0, 800, 600);
 
         // 2. Desenha a logo na parte superior
-        batch.draw(imgLogo, 800 / 2f - 200, 350, 400, 200);
+        // batch.draw(imgLogo, 800 / 2f - 200, 350, 400, 200);
 
         // 3. Desenha o botão de jogar
         batch.draw(imgBotao, hitboxBotao.x, hitboxBotao.y, hitboxBotao.width, hitboxBotao.height);
+        batch.draw(imgBotaoSair, hitboxSair.x, hitboxSair.y, hitboxSair.width, hitboxSair.height);
         batch.end();
 
         // Lógica do Clique
@@ -66,6 +69,9 @@ public class MenuScreen implements Screen {
                 // Comando para trocar para a tela do jogo real
                 jogo.setScreen(new GameScreen(jogo));
                 dispose();
+            } else if (hitboxSair.contains(toqueMouse.x, toqueMouse.y)) {
+                dispose();
+                Gdx.app.exit();
             }
         }
     }
@@ -95,7 +101,8 @@ public class MenuScreen implements Screen {
         // Muito importante limpar a memória ao sair do menu
         batch.dispose();
         imgFundo.dispose();
-        imgLogo.dispose();
+        // imgLogo.dispose();
         imgBotao.dispose();
+        imgBotaoSair.dispose();
     }
 }

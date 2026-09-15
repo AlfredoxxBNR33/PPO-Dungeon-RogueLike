@@ -50,16 +50,26 @@ public class Jogador {
 
     private void carregarBarraVida() {
         imgBarraVida = new Texture("barra_de_vida.png");
-
         imgBarraVida.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 
-        int frameWidth = imgBarraVida.getWidth();
-        int frameHeight = imgBarraVida.getHeight() / 6;
+        // A imagem tem 2 colunas e 3 linhas
+        int larguraFrame = imgBarraVida.getWidth() / 2;
+        int alturaFrame = imgBarraVida.getHeight() / 3;
 
+        // O LibGDX fatia a imagem em uma matriz [linha][coluna]
+        TextureRegion[][] pedacos = TextureRegion.split(imgBarraVida, larguraFrame, alturaFrame);
+
+        // Temos 6 frames no total (3 linhas x 2 colunas)
         framesBarraVida = new TextureRegion[6];
-        for (int i = 0; i < 6; i++) {
-            framesBarraVida[i] = new TextureRegion(imgBarraVida, 0, i * frameHeight, frameWidth, frameHeight);
+        int index = 0;
+
+        // Lendo da esquerda pra direita, de cima pra baixo
+        for (int linha = 0; linha < 3; linha++) {
+            for (int coluna = 0; coluna < 2; coluna++) {
+                framesBarraVida[index++] = pedacos[linha][coluna];
+            }
         }
+
         frameBarraVidaAtual = framesBarraVida[0];
     }
 
@@ -152,23 +162,21 @@ public class Jogador {
     }
 
     private void atualizarBarraVida() {
-        int indice = 5;
+        int indice;
 
-        if (vida >= 20) {
+        if (vida >= 21) {
             indice = 0;
-        } else if (vida >= 15) {
+        } else if (vida >= 16) {
             indice = 1;
-        } else if (vida >= 10) {
+        } else if (vida >= 11) {
             indice = 2;
-        } else if (vida >= 5) {
+        } else if (vida >= 6) {
             indice = 3;
-        } else if (vida > 0) {
-            indice = 4;
         } else {
-            indice = 5;
+            indice = 4;
         }
 
-        frameBarraVidaAtual = framesBarraVida[Math.max(0, Math.min(5, indice))];
+        frameBarraVidaAtual = framesBarraVida[Math.max(0, Math.min(framesBarraVida.length - 1, indice))];
     }
 
     public void dispose() {

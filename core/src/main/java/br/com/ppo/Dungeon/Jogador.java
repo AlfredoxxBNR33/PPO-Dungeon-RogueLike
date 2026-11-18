@@ -22,6 +22,7 @@ public class Jogador {
     float tempoAnimacao = 0f;
     public int vida = 25;
     private float tempoInvulnerabilidade = 0f;
+    private boolean moving;
 
     Texture sheetAstronauta;
     Animation<TextureRegion> animBaixo, animCima, animEsq, animDir;
@@ -86,6 +87,9 @@ public class Jogador {
     }
 
     public void update(float dt, DungeonPT2 dungeon, int tamanhoTile, int larguraMapa, int alturaMapa) {
+        float posicaoInicialX = x;
+        float posicaoInicialY = y;
+
         if (tempoInvulnerabilidade > 0f) {
             tempoInvulnerabilidade -= dt;
         }
@@ -94,29 +98,24 @@ public class Jogador {
 
         float novaX = x;
         float novaY = y;
-        boolean moveu = false;
         Vector2 direcaoMovimento = new Vector2();
 
         // Calcula a intenção de movimento baseada no teclado
         if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
             direcaoMovimento.y += 1f;
             direcaoAtual = CIMA;
-            moveu = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
             direcaoMovimento.y -= 1f;
             direcaoAtual = BAIXO;
-            moveu = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             direcaoMovimento.x -= 1f;
             direcaoAtual = ESQUERDA;
-            moveu = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
             direcaoMovimento.x += 1f;
             direcaoAtual = DIREITA;
-            moveu = true;
         }
 
         // Normaliza o vetor para evitar velocidade maior na diagonal
@@ -140,8 +139,9 @@ public class Jogador {
 
         // Garante que a caixa de colisão fique perfeitamente colada no jogador
         hitBox.setPosition(x - 14f, y - 14f);
+        moving = x != posicaoInicialX || y != posicaoInicialY;
 
-        if (moveu) {
+        if (moving) {
             tempoAnimacao += dt;
         } else {
             tempoAnimacao = 0;
@@ -200,6 +200,10 @@ public class Jogador {
 
     public int getVida() {
         return this.vida;
+    }
+
+    public boolean isMoving() {
+        return moving;
     }
 
     // Método útil para quando o inimigo for atacar o jogador

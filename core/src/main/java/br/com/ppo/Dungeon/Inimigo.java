@@ -233,4 +233,8 @@ public class Inimigo {
     public int getVida() {
         return this.vida;
     }
+
+    public boolean estaMorto() {
+        return morto;
+    }
 }

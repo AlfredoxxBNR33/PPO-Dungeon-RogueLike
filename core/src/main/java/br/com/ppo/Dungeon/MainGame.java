@@ -9,6 +9,7 @@ public class MainGame extends Game {
     // Essas variáveis são públicas para que qualquer tela possa acessar
     public SpriteBatch batch;
     public BitmapFont font; // A fonte para escrever na tela (HUD)
+    public GameAudio audio;
 
     @Override
     public void create() {
@@ -16,6 +17,7 @@ public class MainGame extends Game {
 
         // Carrega a fonte padrão do sistema (depois podemos colocar uma pixelada)
         font = new BitmapFont();
+        audio = new GameAudio();
 
         // Aqui dizemos: "Gerente, comece o trabalho pela tela do Jogo"
         // No futuro, mudaremos para: setScreen(new MenuScreen(this));
@@ -31,6 +33,7 @@ public class MainGame extends Game {
 
     @Override
     public void dispose() {
+        audio.dispose();
         batch.dispose();
         font.dispose();
     }

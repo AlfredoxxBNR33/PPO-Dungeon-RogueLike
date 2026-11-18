@@ -3,11 +3,14 @@ package br.com.ppo.Dungeon;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector3;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -26,6 +29,12 @@ public class GameScreen implements Screen {
     // Cameras
     OrthographicCamera camera;
     OrthographicCamera uiCamera;
+    private final ShapeRenderer shapeRenderer = new ShapeRenderer();
+    private final com.badlogic.gdx.math.Rectangle pauseButton = new com.badlogic.gdx.math.Rectangle();
+    private final com.badlogic.gdx.math.Rectangle resumeButton = new com.badlogic.gdx.math.Rectangle();
+    private final com.badlogic.gdx.math.Rectangle exitButton = new com.badlogic.gdx.math.Rectangle();
+    private final Vector3 touchPosition = new Vector3();
+    private boolean paused;
 
     // Lógica do jogo
     DungeonPT2 dungeon;
@@ -111,13 +120,19 @@ public class GameScreen implements Screen {
         float inimigoY = (segundaSala.y * tamanhoTile) + (segundaSala.height * tamanhoTile / 2f);
 
         listaInimigo.add((new Inimigo(inimigoX, inimigoY)));
+        game.audio.playEnemySpawn(inimigoX, inimigoY, jogador.x, jogador.y);
     }
 
     @Override
     public void render(float delta) {
 
+        updatePauseButtonBounds();
+        handlePauseInput();
+
+        if (!paused) {
         // Atualiza a física e movimentação do jogador
         jogador.update(delta, dungeon, tamanhoTile, larguraMapa, alturaMapa);
+        game.audio.setFootstepsPlaying(jogador.isMoving());
 
         if (jogador.getVida() <= 0) {
             game.setScreen(new GameoverScreen(game));
@@ -132,6 +147,7 @@ public class GameScreen implements Screen {
         if (Gdx.input.isKeyPressed(Input.Keys.SPACE) && tempoRecarga <= 0) {
             // Cria o tiro saindo da posição atual do jogador
             listaTiros.add(new Tiro(jogador.x - 15, jogador.y - 18, jogador.direcaoAtual, animacaoTiro));
+            game.audio.playShot();
             tempoRecarga = 0.4f;
         }
         tempoSpawn += delta;
@@ -166,6 +182,7 @@ public class GameScreen implements Screen {
 
                 if (podeSpawnar) {
                     listaInimigo.add(novoInimigo);
+                    game.audio.playEnemySpawn(novoInimigo.x, novoInimigo.y, jogador.x, jogador.y);
                     tempoSpawn = 0;
                     spawnouComSucesso = true;
                     break;
@@ -182,9 +199,11 @@ public class GameScreen implements Screen {
 
             for (Inimigo inimigo : listaInimigo) {
                 if (t.retanguloColisao.overlaps(inimigo.getHitbox())) {
+                    boolean inimigoVivo = inimigo.getVida() > 0;
                     inimigo.darDano(1);
-                    if (inimigo.getVida() <= 0) {
+                    if (inimigoVivo && inimigo.getVida() <= 0) {
                         numKills++;
+                        game.audio.playEnemyDeath(inimigo.x, inimigo.y, jogador.x, jogador.y);
                         liberarChaveSeNecessario();
                     }
                     acertouAlvo = true;
@@ -206,6 +225,9 @@ public class GameScreen implements Screen {
             // regra para dar dano
             if (inimigo.getHitbox().overlaps(jogador.getHitbox())) {
                 jogador.levarDano(5);
+                if (!inimigo.estaMorto()) {
+                    game.audio.playEnemyDeath(inimigo.x, inimigo.y, jogador.x, jogador.y);
+                }
                 inimigo.morrer();
             }
 
@@ -219,6 +241,7 @@ public class GameScreen implements Screen {
             game.setScreen(new VictoryScreen(game));
             dispose();
             return;
+        }
         }
 
         // --- INÍCIO DO DESENHO ---
@@ -297,6 +320,95 @@ public class GameScreen implements Screen {
         // game.font.draw(game.batch, "Kills: " + numKills, 20, altura - 60);
         game.font.getData().setScale(1f);
         game.batch.end();
+
+        drawPauseButton();
+        if (paused) {
+            drawPauseMenu();
+        }
+    }
+
+    private void updatePauseButtonBounds() {
+        float width = uiCamera.viewportWidth;
+        float height = uiCamera.viewportHeight;
+        pauseButton.set(width - 90, height - 70, 60, 50);
+        resumeButton.set(width / 2f - 160, height / 2f + 5, 320, 70);
+        exitButton.set(width / 2f - 160, height / 2f - 80, 320, 70);
+    }
+
+    private void handlePauseInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            paused = !paused;
+            if (paused) {
+                game.audio.stopFootsteps();
+            }
+            return;
+        }
+
+        if (!Gdx.input.justTouched()) {
+            return;
+        }
+
+        touchPosition.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+        uiCamera.unproject(touchPosition);
+        if (paused) {
+            if (resumeButton.contains(touchPosition.x, touchPosition.y)) {
+                paused = false;
+            } else if (exitButton.contains(touchPosition.x, touchPosition.y)) {
+                Gdx.app.exit();
+            }
+        } else if (pauseButton.contains(touchPosition.x, touchPosition.y)) {
+            paused = true;
+            game.audio.stopFootsteps();
+        }
+    }
+
+    private void drawPauseButton() {
+        shapeRenderer.setProjectionMatrix(uiCamera.combined);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0.05f, 0.12f, 0.16f, 0.9f);
+        shapeRenderer.rect(pauseButton.x, pauseButton.y, pauseButton.width, pauseButton.height);
+        shapeRenderer.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        game.batch.setProjectionMatrix(uiCamera.combined);
+        game.batch.begin();
+        game.font.setColor(Color.WHITE);
+        game.font.getData().setScale(1.5f);
+        game.font.draw(game.batch, "||", pauseButton.x + 19, pauseButton.y + 35);
+        game.font.getData().setScale(1f);
+        game.batch.end();
+    }
+
+    private void drawPauseMenu() {
+        float width = uiCamera.viewportWidth;
+        float height = uiCamera.viewportHeight;
+        shapeRenderer.setProjectionMatrix(uiCamera.combined);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0f, 0f, 0.75f);
+        shapeRenderer.rect(0, 0, width, height);
+        shapeRenderer.setColor(0.05f, 0.12f, 0.16f, 1f);
+        shapeRenderer.rect(width / 2f - 220, height / 2f - 130, 440, 280);
+        shapeRenderer.setColor(0.12f, 0.55f, 0.2f, 1f);
+        shapeRenderer.rect(resumeButton.x, resumeButton.y, resumeButton.width, resumeButton.height);
+        shapeRenderer.setColor(0.65f, 0.12f, 0.12f, 1f);
+        shapeRenderer.rect(exitButton.x, exitButton.y, exitButton.width, exitButton.height);
+        shapeRenderer.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        game.batch.setProjectionMatrix(uiCamera.combined);
+        game.batch.begin();
+        game.font.setColor(Color.WHITE);
+        game.font.getData().setScale(2f);
+        game.font.draw(game.batch, "PAUSADO", width / 2f - 90, height / 2f + 115);
+        game.font.getData().setScale(1.5f);
+        game.font.draw(game.batch, "RETOMAR", resumeButton.x + 105, resumeButton.y + 43);
+        game.font.draw(game.batch, "SAIR", exitButton.x + 130, exitButton.y + 43);
+        game.font.getData().setScale(1f);
+        game.batch.end();
     }
 
     // Função pra checar paredes (deixei aqui porque o tiro usa também)
@@ -325,6 +437,7 @@ public class GameScreen implements Screen {
 
     @Override
     public void pause() {
+        game.audio.stopFootsteps();
     }
 
     @Override
@@ -337,6 +450,8 @@ public class GameScreen implements Screen {
 
     @Override
     public void dispose() {
+        game.audio.stopFootsteps();
+        shapeRenderer.dispose();
         imgChao.dispose();
         imgParede.dispose();
         imgLuz.dispose();
